@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+    useCallback,
+} from "react";
+
 import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
@@ -8,7 +15,9 @@ import {
     signInWithPopup,
     User,
 } from "firebase/auth";
-import { auth } from "./firebase";
+
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "./firebase";
 import { toast } from "react-hot-toast";
 
 interface AuthContextType {
@@ -26,8 +35,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
+    // 🔥 Create Firestore User Document
+    const createUserInFirestore = async (firebaseUser: User) => {
+        if (!firebaseUser) return;
+
+        try {
+            const userRef = doc(db, "users", firebaseUser.uid);
+            const userSnap = await getDoc(userRef);
+
+            // Agar pehle se exist nahi karta
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email || "",
+                    displayName: firebaseUser.displayName || "",
+                    photoURL: firebaseUser.photoURL || "",
+                    role: "user",
+                    createdAt: serverTimestamp(),
+                });
+
+                console.log("User document created in Firestore");
+            }
+        } catch (error) {
+            console.error("Error creating user document:", error);
+        }
+    };
+
+    // 🔥 Auth State Listener
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+        const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                await createUserInFirestore(firebaseUser);
+            }
+
             setUser(firebaseUser);
             setIsLoadingAuth(false);
         });
@@ -35,39 +75,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => unsub();
     }, []);
 
+    // 🔥 Email Login
     const login = async (email: string, password: string) => {
         try {
-            console.log("Logging in with email: ", email);
-            console.log("Logging in with password: ", password);
-            return await signInWithEmailAndPassword(auth, email, password);
+            const result = await signInWithEmailAndPassword(auth, email, password);
+            toast.success("Login successful");
+            return result;
         } catch (error: any) {
             toast.error(error.message || "Failed to login");
             throw error;
         }
     };
 
+    // 🔥 Email Signup
     const signup = async (email: string, password: string) => {
         try {
-            return await createUserWithEmailAndPassword(auth, email, password);
+            const result = await createUserWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+            await createUserInFirestore(result.user);
+
+            toast.success("Account created successfully");
+            return result;
         } catch (error: any) {
             toast.error(error.message || "Failed to create account");
             throw error;
         }
     };
 
+    // 🔥 Google Login
     const loginWithGoogle = async () => {
         try {
             const provider = new GoogleAuthProvider();
-            return await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, provider);
+
+            await createUserInFirestore(result.user);
+
+            toast.success("Google login successful");
+            return result;
         } catch (error: any) {
             toast.error(error.message || "Google sign-in failed");
             throw error;
         }
     };
 
+    // 🔥 Logout
     const logout = useCallback(async () => {
         try {
             await signOut(auth);
+            toast.success("Logged out successfully");
         } catch (error: any) {
             toast.error("Failed to logout");
         }
@@ -89,6 +148,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
+// 🔥 Custom Hook
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -96,4 +156,3 @@ export const useAuth = () => {
     }
     return context;
 };
-

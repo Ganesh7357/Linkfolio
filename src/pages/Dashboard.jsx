@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
 import { createPageUrl } from "../utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +16,24 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { dummyBioPages, templates } from "../components/bio/templateData";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
+
 
 export default function Dashboard() {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [pages, setPages] = useState(dummyBioPages);
     const [search, setSearch] = useState("");
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate(createPageUrl("Landing"));
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
+
 
     const filteredPages = pages.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,12 +92,17 @@ export default function Dashboard() {
                             className="h-9 w-9 rounded-full object-cover"
                         />
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">Sarah Chen</p>
-                            <p className="text-xs text-gray-500 truncate">sarah@example.com</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                                {user?.displayName || "User"}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                                {user?.email}
+                            </p>
                         </div>
-                        <Link to={createPageUrl("Landing")}>
+                        <button onClick={handleLogout} title="Sign Out">
                             <LogOut className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" />
-                        </Link>
+                        </button>
+
                     </div>
                 </div>
             </aside>
@@ -110,10 +130,11 @@ export default function Dashboard() {
                             </button>
                             <div className="lg:hidden">
                                 <img
-                                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face"
+                                    src={user?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face"}
                                     alt="Avatar"
                                     className="h-8 w-8 rounded-full object-cover"
                                 />
+
                             </div>
                         </div>
                     </div>
@@ -127,8 +148,9 @@ export default function Dashboard() {
                         className="mb-8"
                     >
                         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                            Good afternoon, Sarah 👋
+                            Good afternoon, {user?.displayName?.split(' ')[0] || "there"} 👋
                         </h2>
+
                         <p className="text-gray-500 mt-1">Here's an overview of your bio pages.</p>
                     </motion.div>
 
