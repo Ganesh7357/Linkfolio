@@ -54,14 +54,14 @@ function AppContent() {
 function App() {
     return (
         <AuthProvider>
-            <QueryClientProvider client={queryClientInstance}>
-                <Router>
-                    <NavigationTracker />
-                    <AppContent />
-                </Router>
-                <Toaster />
-                <HotToaster position="top-center" />
-            </QueryClientProvider>
+            {/* <QueryClientProvider client={queryClientInstance}> */}
+            <Router>
+                <NavigationTracker />
+                <AppContent />
+            </Router>
+            <Toaster />
+            <HotToaster position="top-center" />
+            {/* </QueryClientProvider> */}
         </AuthProvider>
     )
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { Button } from "@/components/ui/button";
@@ -7,21 +7,59 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Globe, Check, Copy, AlertCircle, Sparkles, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function CustomDomain() {
     const [domain, setDomain] = useState("");
     const [connected, setConnected] = useState(false);
     const [checking, setChecking] = useState(false);
 
-    const handleConnect = () => {
-        if (!domain) return;
-        setChecking(true);
-        setTimeout(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    useEffect(() => {
+        const fetchDomain = async () => {
+            if (!user) return;
+
+            const snap = await getDoc(doc(db, "users", user.uid));
+
+            if (snap.exists() && snap.data().customDomain) {
+                const data = snap.data().customDomain;
+                setDomain(data.domain);
+                setConnected(data.status === "verified");
+            }
+        };
+
+        fetchDomain();
+    }, [user]);
+
+
+    const handleConnect = async () => {
+        console.log(domain, user, '-----------------------');
+        if (!domain || !user) return;
+
+        try {
+            setChecking(true);
+
+            await setDoc(doc(db, "users", user.uid), {
+                customDomain: {
+                    domain,
+                    status: "pending",
+                    connectedAt: new Date(),
+                }
+            }, { merge: true });
+
             setChecking(false);
-            setConnected(true);
-            toast.success("Domain connected successfully!");
-        }, 2000);
+            toast.success("Domain saved! Please complete DNS setup.");
+        } catch (error) {
+            console.error(error);
+            setChecking(false);
+            toast.error("Something went wrong");
+        }
     };
+
 
     const copyText = (text) => {
         navigator.clipboard.writeText(text);

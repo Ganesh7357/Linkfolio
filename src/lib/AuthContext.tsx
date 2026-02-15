@@ -22,6 +22,7 @@ import { toast } from "react-hot-toast";
 
 interface AuthContextType {
     user: User | null;
+    role: string | null;
     isLoadingAuth: boolean;
     login: (email: string, password: string) => Promise<any>;
     signup: (email: string, password: string) => Promise<any>;
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [role, setRole] = useState<string | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
     // 🔥 Create Firestore User Document
@@ -66,6 +68,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 await createUserInFirestore(firebaseUser);
+
+                // Fetch user role
+                try {
+                    const userRef = doc(db, "users", firebaseUser.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        setRole(userSnap.data().role || "user");
+                    } else {
+                        setRole("user");
+                    }
+                } catch (error) {
+                    console.error("Error fetching user role:", error);
+                    setRole("user");
+                }
+            } else {
+                setRole(null);
             }
 
             setUser(firebaseUser);
@@ -136,6 +154,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         <AuthContext.Provider
             value={{
                 user,
+                role,
                 isLoadingAuth,
                 login,
                 signup,

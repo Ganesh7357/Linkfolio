@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 export default function Auth() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, signup, loginWithGoogle, user, isLoadingAuth } = useAuth();
+    const { login, signup, loginWithGoogle, user, role, isLoadingAuth } = useAuth();
 
     const urlParams = new URLSearchParams(window.location.search);
     const [mode, setMode] = useState(urlParams.get("mode") === "signup" ? "signup" : "login");
@@ -22,11 +22,12 @@ export default function Auth() {
 
     // Redirect if already logged in
     useEffect(() => {
-        if (user && !isLoadingAuth) {
-            const from = location.state?.from?.pathname || createPageUrl("Dashboard");
+        if (user && role && !isLoadingAuth) {
+            const defaultPage = role === "Admin" ? createPageUrl("Dashboard") : createPageUrl("Landing");
+            const from = location.state?.from?.pathname || defaultPage;
             navigate(from, { replace: true });
         }
-    }, [user, isLoadingAuth, navigate, location]);
+    }, [user, role, isLoadingAuth, navigate, location]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

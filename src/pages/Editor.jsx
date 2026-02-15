@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { templates } from "../components/bio/templateData";
 import BioPreview from "../components/bio/BioPreview";
+import { useAuth } from "@/lib/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 const themeOptions = [
     { id: "light", label: "Light", icon: Sun, bgClass: "bg-gradient-to-b from-gray-50 to-white" },
@@ -21,27 +24,79 @@ const themeOptions = [
 ];
 
 export default function Editor() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const templateId = urlParams.get("template") || "minimal";
-    const selectedTemplate = templates.find(t => t.id === templateId) || templates[0];
+
+    const [loading, setLoading] = useState(true);
+    const [template, setTemplate] = useState(templates.find(t => t.id === templateId) || templates[0]);
 
     const [profile, setProfile] = useState({
-        name: "Sarah Chen",
-        username: "sarahchen",
-        bio: "Designer & Creator ✨ Sharing tips on building your brand",
+        name: "",
+        username: "",
+        bio: "",
         avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        links: [
-            { id: "1", title: "My Portfolio", url: "https://sarahchen.com" },
-            { id: "2", title: "YouTube Channel", url: "https://youtube.com/@sarahchen" },
-            { id: "3", title: "Online Store", url: "https://store.sarahchen.com" },
-        ],
+        links: [],
     });
 
-    const [theme, setTheme] = useState(selectedTemplate.theme === "dark" ? "dark" : "light");
-    const [activeThemeBg, setActiveThemeBg] = useState(selectedTemplate.bgClass);
+    const [theme, setTheme] = useState(template.theme === "dark" ? "dark" : "light");
+    const [activeThemeBg, setActiveThemeBg] = useState(template.bgClass);
+
+    // 🔥 Fetch Template from Firestore (Optional, fallback to local)
+    useEffect(() => {
+        const fetchTemplate = async () => {
+            try {
+                const docRef = doc(db, "templates", templateId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setTemplate(prev => ({ ...prev, ...data, id: docSnap.id }));
+                    setTheme(data.theme === "dark" ? "dark" : "light");
+                    setActiveThemeBg(data.bgClass);
+                }
+            } catch (error) {
+                console.error("Error fetching template:", error);
+            }
+        };
+        fetchTemplate();
+    }, [templateId]);
+
+    // 🔥 Fetch User Profile from Firestore
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (!user) return;
+            try {
+                const docRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.profile) {
+                        setProfile(data.profile);
+                        if (data.profile.theme) setTheme(data.profile.theme);
+                        if (data.profile.bgClass) setActiveThemeBg(data.profile.bgClass);
+                    } else {
+                        // Set some defaults if profile doesn't exist but user does
+                        setProfile(prev => ({
+                            ...prev,
+                            name: user.displayName || "",
+                            email: user.email || "",
+                            avatar: user.photoURL || prev.avatar
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+                toast.error("Failed to load profile");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, [user]);
 
     const currentTemplate = {
-        ...selectedTemplate,
+        ...template,
         theme,
         bgClass: activeThemeBg,
     };
@@ -71,14 +126,45 @@ export default function Editor() {
         }));
     };
 
-    const handleSave = () => {
-        toast.success("Bio page saved successfully!");
+    const handleSave = async () => {
+        if (!user) {
+            toast.error("You must be logged in to save");
+            return;
+        }
+        try {
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, {
+                profile: {
+                    ...profile,
+                    theme,
+                    bgClass: activeThemeBg,
+                    updatedAt: new Date()
+                }
+            }, { merge: true });
+
+            toast.success("Bio page saved successfully! 🚀");
+            navigate(createPageUrl("CustomDomain"));
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            toast.error("Failed to save profile");
+        }
     };
 
     const handleThemeChange = (t) => {
         setTheme(t.id === "gradient" ? "dark" : t.id);
         setActiveThemeBg(t.bgClass);
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+                    <p className="text-gray-500 font-medium">Loading your editor...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">

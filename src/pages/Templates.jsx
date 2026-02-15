@@ -6,7 +6,6 @@ import Navbar from "../components/bio/Navbar";
 import Footer from "../components/bio/Footer";
 import TemplateCard from "../components/bio/TemplateCard";
 import { templates } from "../components/bio/templateData";
-
 export default function Templates() {
     const navigate = useNavigate();
 
