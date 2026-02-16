@@ -8,6 +8,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider } from '@/lib/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster as HotToaster } from "react-hot-toast";
+import PublicBio from "./pages/PublicBio"
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -45,7 +46,8 @@ function AppContent() {
                     />
                 );
             })}
-
+            {/* 👇 Dynamic Public Route (Keep LAST) */}
+            <Route path="/:username" element={<PublicBio />} />
             <Route path="*" element={<PageNotFound />} />
         </Routes>
     );
@@ -54,14 +56,12 @@ function AppContent() {
 function App() {
     return (
         <AuthProvider>
-            {/* <QueryClientProvider client={queryClientInstance}> */}
             <Router>
                 <NavigationTracker />
                 <AppContent />
             </Router>
             <Toaster />
             <HotToaster position="top-center" />
-            {/* </QueryClientProvider> */}
         </AuthProvider>
     )
 }

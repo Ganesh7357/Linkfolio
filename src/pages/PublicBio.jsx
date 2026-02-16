@@ -3,11 +3,10 @@ import { ExternalLink, Sparkles, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { useParams } from "react-router-dom";
 
 export default function PublicBio() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get("username");
-
+    const { username } = useParams();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

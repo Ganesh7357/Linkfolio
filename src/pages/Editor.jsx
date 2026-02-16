@@ -180,7 +180,7 @@ export default function Editor() {
                         <h1 className="font-semibold text-gray-900 hidden sm:block">Edit Bio Page</h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link to={createPageUrl("PublicBio") + `?username=${profile.username}`}>
+                        <Link to={`/${profile.username}`}>
                             <Button variant="outline" size="sm" className="rounded-xl">
                                 <Eye className="h-4 w-4 mr-1.5" /> Preview
                             </Button>
