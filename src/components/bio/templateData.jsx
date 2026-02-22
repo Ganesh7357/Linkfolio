@@ -65,7 +65,7 @@ export const plans = [
     {
         name: "Basic",
         price: "Free",
-        period: null,
+        period: "1 week",
         description: "Perfect to get started with your first bio page.",
         cta: "Start for Free",
         popular: false,
@@ -79,7 +79,7 @@ export const plans = [
     },
     {
         name: "Pro",
-        price: "₹299",
+        price: "$5",
         period: "month",
         description: "Everything you need to grow your audience.",
         cta: "Upgrade to Pro",
@@ -96,7 +96,7 @@ export const plans = [
     },
     {
         name: "Lifetime",
-        price: "₹2,999",
+        price: "$50",
         period: null,
         description: "Pay once, own it forever. Best value.",
         cta: "Get Lifetime Access",

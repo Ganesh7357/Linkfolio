@@ -1,5 +1,7 @@
 **Welcome to your Base44 project** 
-
+npm run dev
+npm run build
+firebase deploy
 **About**
 
 View and Edit  your app on [Base44.com](http://Base44.com) 

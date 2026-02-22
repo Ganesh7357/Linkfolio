@@ -13,8 +13,8 @@ export default function Payment() {
     const [processing, setProcessing] = useState(false);
 
     const planDetails = {
-        pro: { name: "Pro Plan", price: "₹299", period: "/month", description: "Everything you need to grow" },
-        lifetime: { name: "Lifetime Plan", price: "₹2,999", period: " one-time", description: "Pay once, own it forever" },
+        pro: { name: "Pro Plan", price: "$5", period: "/month", description: "Everything you need to grow" },
+        lifetime: { name: "Lifetime Plan", price: "$50", period: " one-time", description: "Pay once, own it forever" },
     };
 
     const details = planDetails[plan] || planDetails.pro;
