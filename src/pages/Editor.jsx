@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,9 @@ export default function Editor() {
     const templateId = urlParams.get("template") || "minimal";
 
     const [loading, setLoading] = useState(true);
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [template, setTemplate] = useState(templates.find(t => t.id === templateId) || templates[0]);
+    const fileInputRef = useRef(null);
 
     const [profile, setProfile] = useState({
         name: "",
@@ -155,6 +157,57 @@ export default function Editor() {
         setActiveThemeBg(t.bgClass);
     };
 
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+        if (!CLOUD_NAME || !UPLOAD_PRESET) {
+            toast.error("Cloudinary is not configured. Check your .env file.");
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select a valid image file.");
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be smaller than 5 MB.");
+            return;
+        }
+
+        setAvatarUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", UPLOAD_PRESET);
+            formData.append("folder", "linkfolio/avatars");
+
+            const res = await fetch(
+                `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+                { method: "POST", body: formData }
+            );
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error?.message || "Upload failed");
+            }
+
+            const data = await res.json();
+            updateField("avatar", data.secure_url);
+            toast.success("Profile photo updated! 🎉");
+        } catch (error) {
+            console.error("Cloudinary upload error:", error);
+            toast.error(error.message || "Failed to upload image");
+        } finally {
+            setAvatarUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -214,13 +267,30 @@ export default function Editor() {
                                         alt="Avatar"
                                         className="h-20 w-20 rounded-2xl object-cover border-2 border-gray-100"
                                     />
-                                    <button className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors">
-                                        <Upload className="h-3.5 w-3.5" />
+                                    {/* Hidden file input */}
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        className="hidden"
+                                        onChange={handleAvatarUpload}
+                                    />
+                                    <button
+                                        type="button"
+                                        disabled={avatarUploading}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                                    >
+                                        {avatarUploading
+                                            ? <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            : <Upload className="h-3.5 w-3.5" />}
                                     </button>
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-700">Profile Photo</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Recommended: 400x400px, JPG or PNG</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        {avatarUploading ? "Uploading…" : "Recommended: 400x400px, JPG or PNG"}
+                                    </p>
                                 </div>
                             </div>
 
